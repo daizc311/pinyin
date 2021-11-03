@@ -7,22 +7,20 @@ import java.io.File;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 public class TemporaryDictionaryLoader {
 
-    private static InputStream dictFileInputStream;
+    private static Supplier<InputStream> dictFileInputStreamProvider;
 
-    public static void setDictFileInputStream(InputStream dictFileInputStream) {
-        if (dictFileInputStream!=null){
-            System.err.println("dictFileInputStream已经有值，不能再次设置");
-        }
-        TemporaryDictionaryLoader.dictFileInputStream = dictFileInputStream;
+    public static void setDictFileInputStreamProvider(Supplier<InputStream> dictFileInputStreamProvider) {
+        TemporaryDictionaryLoader.dictFileInputStreamProvider = dictFileInputStreamProvider;
     }
 
     public static List<String> load() {
         try {
-            if (dictFileInputStream != null) {
-                return StreamUtil.readAllLines(dictFileInputStream);
+            if (dictFileInputStreamProvider != null) {
+                return StreamUtil.readAllLines(dictFileInputStreamProvider.get());
             }
         } catch (Exception e) {
             System.err.println(e.getMessage());

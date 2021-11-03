@@ -15,9 +15,8 @@ import com.github.houbb.pinyin.model.ToneItem;
 import com.github.houbb.pinyin.spi.IPinyinToneStyle;
 import com.github.houbb.pinyin.util.ToneHelper;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 正常的拼音注音形式
@@ -111,20 +110,25 @@ public class DefaultPinyinTone extends AbstractPinyinTone {
         synchronized (DefaultPinyinTone.class) {
             if(ObjectUtil.isNull(charMap)) {
                 final long startTime = System.currentTimeMillis();
-                List<String> lines = StreamUtil.readAllLines(PinyinConst.PINYIN_DICT_CHAR_SYSTEM);
-                // 自定义词库
-                List<String> defineLines = StreamUtil.readAllLines(PinyinConst.PINYIN_DICT_CHAR_DEFINE);
-                lines.addAll(defineLines);
-                charMap = Guavas.newHashMap(lines.size());
-                // 临时词库加载器
-                List<String> tempLines = TemporaryDictionaryLoader.load();
-                lines.addAll(tempLines);
 
+                final LinkedList<String> lines = new LinkedList<>();
+                // 系统词库
+                List<String> sysDictLine = StreamUtil.readAllLines(PinyinConst.PINYIN_DICT_CHAR_SYSTEM);
+                lines.addAll(sysDictLine);
+
+                // 自定义词库
+                List<String> defineDictLines = StreamUtil.readAllLines(PinyinConst.PINYIN_DICT_CHAR_DEFINE);
+                lines.addAll(defineDictLines);
+
+                // 临时词库加载器
+                List<String> tempDictLines = TemporaryDictionaryLoader.load();
+                lines.addAll(tempDictLines);
+
+                charMap = Guavas.newHashMap(lines.size());
                 for(String line : lines) {
                     String[] strings = line.split(PunctuationConst.COLON);
-                    List<String> pinyinList = StringUtil.splitToList(strings[1]);
-
                     final String word = strings[0];
+                    final List<String> pinyinList = StringUtil.splitToList(strings[1]);
                     charMap.put(word, pinyinList);
                 }
 
