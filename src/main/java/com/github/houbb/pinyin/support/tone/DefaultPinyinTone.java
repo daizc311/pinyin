@@ -16,11 +16,10 @@ import com.github.houbb.pinyin.spi.IPinyinToneStyle;
 import com.github.houbb.pinyin.util.ToneHelper;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 正常的拼音注音形式
- *
+ * <p>
  * （1）单个字的词库与词组的词库分离
  * （2）二者词库都是懒加载，只有使用的时候才会去初始化。
  *
@@ -33,18 +32,20 @@ public class DefaultPinyinTone extends AbstractPinyinTone {
     /**
      * 单个字的 Map
      * DCL 单例，惰性加载。
-     *
+     * <p>
      * （1）注意多音字的问题
      * （2）默认只返回第一个
      * （3）为了提升读取的性能，在初始化的时候，直接设计好。
+     *
      * @since 0.0.1
      */
     private static volatile Map<String, List<String>> charMap;
 
     /**
      * 词组 map
-     *
+     * <p>
      * DCL 单例，惰性加载。
+     *
      * @since 0.0.1
      */
     private static volatile Map<String, String> phraseMap;
@@ -66,7 +67,7 @@ public class DefaultPinyinTone extends AbstractPinyinTone {
         // 大部分拼音都是单个字，不是多音字。
         // 直接在初始化的时候，设置好。
         List<String> pinyinList = getCharMap().get(segment);
-        if(CollectionUtil.isNotEmpty(pinyinList)) {
+        if (CollectionUtil.isNotEmpty(pinyinList)) {
             final String firstPinyin = pinyinList.get(0);
             return toneStyle.style(firstPinyin);
         }
@@ -82,14 +83,14 @@ public class DefaultPinyinTone extends AbstractPinyinTone {
         String phrasePinyin = getPhraseMap().get(segment);
 
         // 直接返回空
-        if(StringUtil.isEmptyTrim(phrasePinyin)) {
+        if (StringUtil.isEmptyTrim(phrasePinyin)) {
             return StringUtil.EMPTY;
         }
 
         String[] strings = phrasePinyin.split(StringUtil.BLANK);
         List<String> resultList = Guavas.newArrayList(strings.length);
 
-        for(String string : strings) {
+        for (String string : strings) {
             final String style = toneStyle.style(string);
             resultList.add(style);
         }
@@ -103,12 +104,12 @@ public class DefaultPinyinTone extends AbstractPinyinTone {
      * @since 0.0.1
      */
     private Map<String, List<String>> getCharMap() {
-        if(ObjectUtil.isNotNull(charMap)) {
+        if (ObjectUtil.isNotNull(charMap)) {
             return charMap;
         }
 
         synchronized (DefaultPinyinTone.class) {
-            if(ObjectUtil.isNull(charMap)) {
+            if (ObjectUtil.isNull(charMap)) {
                 final long startTime = System.currentTimeMillis();
 
                 final LinkedList<String> lines = new LinkedList<>();
@@ -121,11 +122,11 @@ public class DefaultPinyinTone extends AbstractPinyinTone {
                 lines.addAll(defineDictLines);
 
                 // 临时词库加载器
-                List<String> tempDictLines = TemporaryDictionaryLoader.load();
+                List<String> tempDictLines = TemporaryDictionaryLoader.loadCharDictFile();
                 lines.addAll(tempDictLines);
 
                 charMap = Guavas.newHashMap(lines.size());
-                for(String line : lines) {
+                for (String line : lines) {
                     String[] strings = line.split(PunctuationConst.COLON);
                     final String word = strings[0];
                     final List<String> pinyinList = StringUtil.splitToList(strings[1]);
@@ -133,7 +134,7 @@ public class DefaultPinyinTone extends AbstractPinyinTone {
                 }
 
                 final long endTime = System.currentTimeMillis();
-                System.out.println("[Pinyin] char dict loaded, cost time " + (endTime-startTime)+" ms!");
+                System.out.println("[Pinyin] char dict loaded, cost time " + (endTime - startTime) + " ms!");
             }
         }
 
@@ -143,30 +144,41 @@ public class DefaultPinyinTone extends AbstractPinyinTone {
     /**
      * 获取词组的拼音 Map
      * （1）词组的拼音是确定的。
+     *
      * @return map
      * @since 0.0.1
      */
     private Map<String, String> getPhraseMap() {
-        if(ObjectUtil.isNotNull(phraseMap)) {
+        if (ObjectUtil.isNotNull(phraseMap)) {
             return phraseMap;
         }
         synchronized (DefaultPinyinTone.class) {
-            if(ObjectUtil.isNull(phraseMap)) {
+            if (ObjectUtil.isNull(phraseMap)) {
                 final long startTime = System.currentTimeMillis();
-                List<String> lines = StreamUtil.readAllLines(PinyinConst.PINYIN_DICT_PHRASE_SYSTEM);
-                // 处理自定义字典
-                List<String> defineLines = StreamUtil.readAllLines(PinyinConst.PINYIN_DICT_PHRASE_DEFINE);
-                lines.addAll(defineLines);
+
+                final LinkedList<String> lines = new LinkedList<>();
+                // 系统词库
+                List<String> sysDictLine = StreamUtil.readAllLines(PinyinConst.PINYIN_DICT_PHRASE_SYSTEM);
+                lines.addAll(sysDictLine);
+
+                // 自定义词库
+                List<String> defineDictLines = StreamUtil.readAllLines(PinyinConst.PINYIN_DICT_PHRASE_DEFINE);
+                lines.addAll(defineDictLines);
+
+                // 临时词库加载器
+                List<String> tempDictLines = TemporaryDictionaryLoader.loadPhraseDictFile();
+                lines.addAll(tempDictLines);
+
                 phraseMap = Guavas.newHashMap(lines.size());
 
-                for(String line : lines) {
+                for (String line : lines) {
                     String[] strings = line.split(PunctuationConst.COLON);
                     String word = strings[0];
                     phraseMap.put(word, strings[1]);
                 }
 
                 final long endTime = System.currentTimeMillis();
-                System.out.println("[Pinyin] phrase dict loaded, cost time " + (endTime-startTime)+" ms!");
+                System.out.println("[Pinyin] phrase dict loaded, cost time " + (endTime - startTime) + " ms!");
             }
         }
 
@@ -182,7 +194,7 @@ public class DefaultPinyinTone extends AbstractPinyinTone {
     @Override
     public int toneNum(String defaultPinyin) {
         //1. 获取拼音
-        if(StringUtil.isNotEmpty(defaultPinyin)) {
+        if (StringUtil.isNotEmpty(defaultPinyin)) {
             CharToneInfo toneInfo = this.getCharToneInfo(defaultPinyin);
 
             int index = toneInfo.getIndex();
@@ -202,6 +214,7 @@ public class DefaultPinyinTone extends AbstractPinyinTone {
 
     /**
      * 获取对应的声调信息
+     *
      * @param tone 拼音信息
      * @return 声调信息
      * @since 0.0.3
@@ -211,7 +224,7 @@ public class DefaultPinyinTone extends AbstractPinyinTone {
         charToneInfo.setIndex(-1);
 
         int length = tone.length();
-        for(int i = 0; i < length; i++) {
+        for (int i = 0; i < length; i++) {
             char currentChar = tone.charAt(i);
             ToneItem toneItem = ToneHelper.getToneItem(currentChar);
 
