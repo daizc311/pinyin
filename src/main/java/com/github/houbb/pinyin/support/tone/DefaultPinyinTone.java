@@ -116,6 +116,9 @@ public class DefaultPinyinTone extends AbstractPinyinTone {
                 List<String> defineLines = StreamUtil.readAllLines(PinyinConst.PINYIN_DICT_CHAR_DEFINE);
                 lines.addAll(defineLines);
                 charMap = Guavas.newHashMap(lines.size());
+                // 临时词库加载器
+                List<String> tempLines = TemporaryDictionaryLoader.load();
+                lines.addAll(tempLines);
 
                 for(String line : lines) {
                     String[] strings = line.split(PunctuationConst.COLON);
